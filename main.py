@@ -8,13 +8,16 @@ def titlecheck(titleid : str):
     try:
         resp = urllib.request.urlopen(f'https://a0.ww.np.dl.playstation.net/tpl/np/{titleid}/{titleid}-ver.xml', context=ssl._create_unverified_context())
         xml = ET.fromstring(resp.read().decode('utf-8'))
-        return xml[0][0].attrib
+        packages = []
+        for package in xml.iter('package'):
+            packages.append(package.attrib)
+        return packages
     except urllib.error.HTTPError:
         return False
 
 def report(blocknr, blocksize, size):
     current = blocknr*blocksize
-    print("\r{0:.2f}%".format(100.0*current/size))
+    print("\n{0:.2f}%".format(100.0*current/size))
 
 def titledownload(url: str, size: int):
     filename = url.split('/')[-1]
@@ -24,15 +27,29 @@ def titledownload(url: str, size: int):
     except (urllib.error.HTTPError, RuntimeError, TypeError, NameError):
         return False
 
-
 titleid = str(sys.argv[1])
 
-titleinfo = titlecheck(titleid=titleid)
-if titleinfo == False:
+alltitleinfo = titlecheck(titleid)
+
+if alltitleinfo == False:
     print("ERROR! Check Title ID and try again.")
     quit()
 
-print(f"Downloading {titleinfo['url'].split('/')[-1]}\nVersion: {titleinfo['version']}\nSize: {titleinfo['size']}")
+print("Available Versions:\n")
+for i in alltitleinfo: print(i['version'])
+version = input("\nInput Desired Version Number:\n")
+
+titleinfo = False
+for i in alltitleinfo:
+    if i['version'] == version: 
+        titleinfo = i
+        break
+
+if titleinfo == False:
+    print("Invalid Version!")
+    quit()
+
+print(f"\nDownloading {titleinfo['url'].split('/')[-1]}\nVersion: {titleinfo['version']}\nSize: {titleinfo['size']}")
 yn = str(input("Continue Download? (Y/N): ")).lower().strip()
 if yn[0] == 'n':
     quit()
@@ -41,4 +58,4 @@ if download == False:
     print("ERROR! Unable to download title update.")
     quit()
 
-print(f"DONE! Downloaded to {download}")
+print(f"\nDONE! Downloaded to {download}")
